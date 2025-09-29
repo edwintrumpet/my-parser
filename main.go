@@ -2,37 +2,38 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"log/slog"
+	"log"
 	"net"
 	"os"
 	"time"
 )
 
 func main() {
+	file, err := os.OpenFile("/usr/src/app/logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v\n", err)
+	}
+	defer file.Close()
+
+	log.SetOutput(file)
+
 	port := 3000
 
 	listener, err := net.ListenTCP("tcp", &net.TCPAddr{
 		Port: port,
 	})
 	if err != nil {
-		slog.Error("failed listening on port 3005",
-			slog.Int("port", port),
-			slog.String("error", err.Error()),
-		)
-		os.Exit(1)
+		log.Fatalf("failed listening on port 3000: %v\n", err)
 	}
 	defer listener.Close()
 
-	slog.Info("server listening", slog.Int("port", port))
+	log.Printf("server listening on port %d\n", port)
 
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
-			slog.Error("failed receiving tcp connection",
-				slog.String("error", err.Error()),
-			)
+			log.Printf("failed receiving tcp connection: %v\n", err)
 			continue
 		}
 
@@ -43,7 +44,7 @@ func main() {
 func handleConnection(conn *net.TCPConn) {
 	defer conn.Close()
 
-	slog.Info("client connected")
+	log.Println("client connected")
 
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(time.Second * 10)
@@ -53,18 +54,23 @@ func handleConnection(conn *net.TCPConn) {
 		readedBytes, err := conn.Read(buff)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				slog.Info("client disconnected")
+				log.Println("client disconnected")
 				return
 			}
 
-			slog.Error("error reading from the client",
-				slog.String("error", err.Error()),
-			)
+			log.Printf("error reading from the client: %v\n", err)
+
 			continue
 		}
 
 		response := buff[:readedBytes]
 
-		fmt.Println(response)
+		go processMsg(response)
 	}
+}
+
+func processMsg(b []byte) {
+	msg := string(b)
+
+	log.Printf("received: %s\n", msg)
 }

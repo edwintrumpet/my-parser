@@ -3,5 +3,7 @@ services:
     build:
       context: .
     container_name: app
+    volumes:
+      - ./logs:/usr/src/app/logs
     ports:
       - 3000:3000

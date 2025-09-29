@@ -8,6 +8,8 @@ RUN go build -o ./bin/app .
 
 FROM alpine
 
+RUN mkdir -p /usr/src/app/logs
+
 WORKDIR /usr/src/app
 COPY --from=builder ["/usr/src/app/bin/app", "/usr/src/app/"]
 
